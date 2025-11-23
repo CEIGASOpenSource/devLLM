@@ -266,4 +266,6 @@ The built executable will be at `src-tauri/target/release/devllm.exe`
 
 ## License
 
-MIT
+Apache-2.0 - See [LICENSE](LICENSE) and [NOTICE](NOTICE) for details.
+
+If you use devLLM in your project, please provide attribution by mentioning "Built with devLLM by CEIGASOpenSource" in your README or credits.
