@@ -136,7 +136,7 @@ fn detect_port(path: &Path, service_type: &str) -> Option<u16> {
                 }
             }
         }
-        return Some(5173);
+        return Some(5190);
     }
 
     let env_path = path.join(".env");
@@ -748,7 +748,6 @@ backend/
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_shell::init())
         .manage(ProcessManager {
             processes: Mutex::new(HashMap::new()),
         })

@@ -116,20 +116,22 @@ export default function NewProjectModal({ onClose, onCreated }: Props) {
             <div>
               <label className="block text-sm text-slate-400 mb-1">Frontend Port</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={frontendPort}
-                onChange={(e) => setFrontendPort(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                onChange={(e) => setFrontendPort(e.target.value.replace(/\D/g, ''))}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:bg-slate-600 cursor-text"
                 placeholder="5173"
               />
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">Backend Port</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 value={backendPort}
-                onChange={(e) => setBackendPort(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                onChange={(e) => setBackendPort(e.target.value.replace(/\D/g, ''))}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:bg-slate-600 cursor-text"
                 placeholder="8000"
               />
             </div>
