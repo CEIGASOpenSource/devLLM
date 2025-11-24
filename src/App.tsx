@@ -29,7 +29,7 @@ function App() {
     for (const project of projects) {
       const frontendHealthy = await checkPort(project.frontend.port);
       const backendHealthy = await checkEndpoint(
-        `http://127.0.0.1:${project.backend.port}${project.backend.healthEndpoint}`
+        `http://localhost:${project.backend.port}${project.backend.healthEndpoint}`
       );
 
       newStatuses[project.id] = {
@@ -166,10 +166,16 @@ function App() {
 
 async function checkPort(port: number): Promise<boolean> {
   try {
-    await fetch(`http://127.0.0.1:${port}`, {
-      method: 'HEAD',
-      mode: 'no-cors'
+    // Try localhost first (what Vite binds to by default)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+    await fetch(`http://localhost:${port}`, {
+      method: 'GET',
+      mode: 'no-cors',
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     return true;
   } catch {
     return false;
