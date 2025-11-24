@@ -1,16 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ProjectConfig, ProjectStatus } from './types/project';
-import { getProjects, removeProject } from './store/projectStore';
+import { PROJECTS as DEFAULT_PROJECTS } from './types/project';
+import { getProjects, removeProject, getRemovedDefaultIds, restoreDefaultProject } from './store/projectStore';
 import ProjectCard from './components/ProjectCard';
 import NewProjectModal from './components/NewProjectModal';
+import ImportProjectModal from './components/ImportProjectModal';
 
 function App() {
   const [projects, setProjects] = useState<ProjectConfig[]>([]);
+  const [removedDefaults, setRemovedDefaults] = useState<ProjectConfig[]>([]);
   const [statuses, setStatuses] = useState<Record<string, ProjectStatus>>({});
   const [showNewProject, setShowNewProject] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const loadProjects = useCallback(() => {
     setProjects(getProjects());
+    const removedIds = getRemovedDefaultIds();
+    setRemovedDefaults(DEFAULT_PROJECTS.filter(p => removedIds.includes(p.id)));
   }, []);
 
   useEffect(() => {
@@ -56,9 +62,19 @@ function App() {
     loadProjects();
   };
 
+  const handleRestoreDefault = (projectId: string) => {
+    restoreDefaultProject(projectId);
+    loadProjects();
+  };
+
   const handleProjectCreated = () => {
     loadProjects();
     setShowNewProject(false);
+  };
+
+  const handleProjectImported = () => {
+    loadProjects();
+    setShowImport(false);
   };
 
   return (
@@ -69,25 +85,41 @@ function App() {
             <h1 className="text-3xl font-bold text-white">devLLM</h1>
             <p className="text-slate-400 mt-1">AI-Assisted Development Launcher</p>
           </div>
-          <button
-            onClick={() => setShowNewProject(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-          >
-            + New Project
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+            >
+              Import
+            </button>
+            <button
+              onClick={() => setShowNewProject(true)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            >
+              + New Project
+            </button>
+          </div>
         </div>
 
         {projects.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🚀</div>
             <h2 className="text-xl font-semibold text-white mb-2">No projects yet</h2>
-            <p className="text-slate-400 mb-6">Create your first project to get started</p>
-            <button
-              onClick={() => setShowNewProject(true)}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-            >
-              Create Project
-            </button>
+            <p className="text-slate-400 mb-6">Create a new project or import an existing one</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setShowImport(true)}
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+              >
+                Import Existing
+              </button>
+              <button
+                onClick={() => setShowNewProject(true)}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Create Project
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -99,6 +131,18 @@ function App() {
                 onRemove={() => handleRemoveProject(project.id)}
               />
             ))}
+            {/* Restore Removed Defaults */}
+            {removedDefaults.map((project) => (
+              <div
+                key={project.id}
+                onClick={() => handleRestoreDefault(project.id)}
+                className="rounded-xl p-6 border-2 border-dashed border-yellow-700 hover:border-yellow-500 cursor-pointer transition-all duration-300 hover:bg-yellow-800/10 flex flex-col items-center justify-center min-h-[200px]"
+              >
+                <div className="text-4xl text-yellow-600 mb-2">↺</div>
+                <div className="text-yellow-500 font-medium">Restore {project.name}</div>
+                <div className="text-yellow-600/60 text-sm mt-1">Click to re-add</div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -107,6 +151,13 @@ function App() {
         <NewProjectModal
           onClose={() => setShowNewProject(false)}
           onCreated={handleProjectCreated}
+        />
+      )}
+
+      {showImport && (
+        <ImportProjectModal
+          onClose={() => setShowImport(false)}
+          onImported={handleProjectImported}
         />
       )}
     </div>

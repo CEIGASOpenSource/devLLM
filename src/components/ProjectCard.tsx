@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-shell';
 import type { ProjectConfig, ProjectStatus } from '../types/project';
 
 interface Props {
@@ -11,8 +13,50 @@ export default function ProjectCard({ project, status, onRemove }: Props) {
   const backendOk = status?.backend.healthy ?? false;
   const allHealthy = frontendOk && backendOk;
 
-  const openInBrowser = () => {
-    window.open(`http://127.0.0.1:${project.frontend.port}`, '_blank');
+  const openInBrowser = async () => {
+    try {
+      await open(`http://localhost:${project.frontend.port}`);
+    } catch (err) {
+      console.error('Failed to open URL:', err);
+    }
+  };
+
+  const handleFrontendToggle = async () => {
+    try {
+      if (frontendOk) {
+        await invoke('stop_service', {
+          serviceType: 'frontend',
+          projectPath: project.frontend.path,
+        });
+      } else {
+        await invoke('start_service', {
+          serviceType: 'frontend',
+          projectPath: project.frontend.path,
+          command: project.frontend.command,
+        });
+      }
+    } catch (err) {
+      console.error('Frontend toggle error:', err);
+    }
+  };
+
+  const handleBackendToggle = async () => {
+    try {
+      if (backendOk) {
+        await invoke('stop_service', {
+          serviceType: 'backend',
+          projectPath: project.backend.path,
+        });
+      } else {
+        await invoke('start_service', {
+          serviceType: 'backend',
+          projectPath: project.backend.path,
+          command: project.backend.command,
+        });
+      }
+    } catch (err) {
+      console.error('Backend toggle error:', err);
+    }
   };
 
   return (
@@ -43,20 +87,34 @@ export default function ProjectCard({ project, status, onRemove }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-slate-800/50 rounded-lg p-4">
+        <button
+          onClick={handleFrontendToggle}
+          className="bg-slate-800/50 hover:bg-slate-700/50 rounded-lg p-4 text-left transition-colors cursor-pointer"
+          title={frontendOk ? 'Click to stop frontend' : 'Click to start frontend'}
+        >
           <div className="flex items-center gap-2 mb-2">
             <span className="text-slate-400 text-sm font-medium">FRONTEND</span>
             <span className={`w-2 h-2 rounded-full ${frontendOk ? 'bg-green-500' : 'bg-red-500'}`} />
           </div>
           <div className="text-white font-mono">:{project.frontend.port}</div>
-        </div>
-        <div className="bg-slate-800/50 rounded-lg p-4">
+          <div className="text-xs text-slate-500 mt-1">
+            {frontendOk ? 'Running - click to stop' : 'Stopped - click to start'}
+          </div>
+        </button>
+        <button
+          onClick={handleBackendToggle}
+          className="bg-slate-800/50 hover:bg-slate-700/50 rounded-lg p-4 text-left transition-colors cursor-pointer"
+          title={backendOk ? 'Click to stop backend' : 'Click to start backend'}
+        >
           <div className="flex items-center gap-2 mb-2">
             <span className="text-slate-400 text-sm font-medium">BACKEND</span>
             <span className={`w-2 h-2 rounded-full ${backendOk ? 'bg-green-500' : 'bg-red-500'}`} />
           </div>
           <div className="text-white font-mono">:{project.backend.port}</div>
-        </div>
+          <div className="text-xs text-slate-500 mt-1">
+            {backendOk ? 'Running - click to stop' : 'Stopped - click to start'}
+          </div>
+        </button>
       </div>
 
       <button

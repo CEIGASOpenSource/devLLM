@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { ProjectConfig } from '../types/project';
 import { addProject, getNextAvailablePorts, getRandomColor } from '../store/projectStore';
@@ -12,10 +12,17 @@ export default function NewProjectModal({ onClose, onCreated }: Props) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [basePath, setBasePath] = useState('C:/Dev');
+  const [frontendPort, setFrontendPort] = useState('');
+  const [backendPort, setBackendPort] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const ports = getNextAvailablePorts();
+  // Initialize ports when component mounts
+  useEffect(() => {
+    const ports = getNextAvailablePorts();
+    setFrontendPort(String(ports.frontend));
+    setBackendPort(String(ports.backend));
+  }, []);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -28,14 +35,16 @@ export default function NewProjectModal({ onClose, onCreated }: Props) {
 
     const projectId = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
     const projectPath = `${basePath}/${projectId}`;
+    const fePort = parseInt(frontendPort) || 5173;
+    const bePort = parseInt(backendPort) || 8000;
 
     try {
       // Create project folders via Tauri
       await invoke('create_project', {
         projectPath,
         projectName: name,
-        frontendPort: ports.frontend,
-        backendPort: ports.backend,
+        frontendPort: fePort,
+        backendPort: bePort,
       });
 
       const project: ProjectConfig = {
@@ -44,14 +53,14 @@ export default function NewProjectModal({ onClose, onCreated }: Props) {
         description: description || `${name} project`,
         color: getRandomColor(),
         frontend: {
-          port: ports.frontend,
+          port: fePort,
           path: `${projectPath}/frontend`,
           command: 'npm run dev',
         },
         backend: {
-          port: ports.backend,
+          port: bePort,
           path: `${projectPath}/backend`,
-          command: `.venv/Scripts/uvicorn main:app --reload --port ${ports.backend}`,
+          command: `.venv/Scripts/uvicorn main:app --reload --port ${bePort}`,
           healthEndpoint: '/health',
         },
       };
@@ -106,15 +115,23 @@ export default function NewProjectModal({ onClose, onCreated }: Props) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1">Frontend Port</label>
-              <div className="px-3 py-2 bg-slate-900/50 rounded-lg text-slate-300 font-mono">
-                {ports.frontend}
-              </div>
+              <input
+                type="number"
+                value={frontendPort}
+                onChange={(e) => setFrontendPort(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                placeholder="5173"
+              />
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">Backend Port</label>
-              <div className="px-3 py-2 bg-slate-900/50 rounded-lg text-slate-300 font-mono">
-                {ports.backend}
-              </div>
+              <input
+                type="number"
+                value={backendPort}
+                onChange={(e) => setBackendPort(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                placeholder="8000"
+              />
             </div>
           </div>
 

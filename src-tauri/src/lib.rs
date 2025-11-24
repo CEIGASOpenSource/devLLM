@@ -1,5 +1,167 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::process::{Child, Command};
+use std::sync::Mutex;
+use tauri::State;
+
+// Store running processes
+struct ProcessManager {
+    processes: Mutex<HashMap<String, Child>>,
+}
+
+#[tauri::command]
+fn start_service(
+    service_type: String,
+    project_path: String,
+    command: String,
+    state: State<ProcessManager>,
+) -> Result<String, String> {
+    let key = format!("{}:{}", project_path, service_type);
+
+    {
+        let processes = state.processes.lock().map_err(|e| e.to_string())?;
+        if processes.contains_key(&key) {
+            return Err(format!("{} is already running", service_type));
+        }
+    }
+
+    let path = Path::new(&project_path);
+    if !path.exists() {
+        return Err(format!("Path does not exist: {}", project_path));
+    }
+
+    let child = if cfg!(windows) {
+        Command::new("cmd")
+            .args(&["/c", &command])
+            .current_dir(path)
+            .spawn()
+            .map_err(|e| format!("Failed to start {}: {}", service_type, e))?
+    } else {
+        Command::new("sh")
+            .args(&["-c", &command])
+            .current_dir(path)
+            .spawn()
+            .map_err(|e| format!("Failed to start {}: {}", service_type, e))?
+    };
+
+    let pid = child.id();
+    let mut processes = state.processes.lock().map_err(|e| e.to_string())?;
+    processes.insert(key, child);
+
+    Ok(format!("{} started with PID {}", service_type, pid))
+}
+
+#[tauri::command]
+fn stop_service(
+    service_type: String,
+    project_path: String,
+    state: State<ProcessManager>,
+) -> Result<String, String> {
+    let key = format!("{}:{}", project_path, service_type);
+    let mut processes = state.processes.lock().map_err(|e| e.to_string())?;
+
+    if let Some(mut child) = processes.remove(&key) {
+        if cfg!(windows) {
+            let pid = child.id();
+            let _ = Command::new("taskkill")
+                .args(&["/F", "/T", "/PID", &pid.to_string()])
+                .output();
+        } else {
+            let _ = child.kill();
+        }
+        Ok(format!("{} stopped", service_type))
+    } else {
+        Err(format!("{} is not running", service_type))
+    }
+}
+
+#[derive(serde::Serialize)]
+struct DetectedProject {
+    has_frontend: bool,
+    has_backend: bool,
+    frontend_port: Option<u16>,
+    backend_port: Option<u16>,
+    project_name: String,
+}
+
+#[tauri::command]
+fn detect_project(project_path: String) -> Result<DetectedProject, String> {
+    let path = Path::new(&project_path);
+    if !path.exists() {
+        return Err("Path does not exist".to_string());
+    }
+
+    let frontend_path = path.join("frontend");
+    let backend_path = path.join("backend");
+
+    let has_frontend = frontend_path.join("package.json").exists();
+    let has_backend = backend_path.join("requirements.txt").exists()
+        || backend_path.join("main.py").exists();
+
+    let frontend_port = if has_frontend {
+        detect_port(&frontend_path, "frontend")
+    } else {
+        None
+    };
+
+    let backend_port = if has_backend {
+        detect_port(&backend_path, "backend")
+    } else {
+        None
+    };
+
+    let project_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("Unknown")
+        .to_string();
+
+    Ok(DetectedProject {
+        has_frontend,
+        has_backend,
+        frontend_port,
+        backend_port,
+        project_name,
+    })
+}
+
+fn detect_port(path: &Path, service_type: &str) -> Option<u16> {
+    if service_type == "frontend" {
+        for ext in &["ts", "js"] {
+            let config = path.join(format!("vite.config.{}", ext));
+            if let Ok(content) = fs::read_to_string(&config) {
+                if let Some(port) = extract_port(&content) {
+                    return Some(port);
+                }
+            }
+        }
+        return Some(5173);
+    }
+
+    let env_path = path.join(".env");
+    if let Ok(content) = fs::read_to_string(&env_path) {
+        if let Some(port) = extract_port(&content) {
+            return Some(port);
+        }
+    }
+    Some(8000)
+}
+
+fn extract_port(content: &str) -> Option<u16> {
+    for line in content.lines() {
+        if line.contains("port") || line.contains("PORT") {
+            for word in line.split(|c: char| !c.is_ascii_digit()) {
+                if let Ok(port) = word.parse::<u16>() {
+                    if port >= 1024 && port <= 65535 {
+                        return Some(port);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
 
 #[tauri::command]
 fn create_project(
@@ -585,7 +747,17 @@ backend/
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![create_project])
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
+        .manage(ProcessManager {
+            processes: Mutex::new(HashMap::new()),
+        })
+        .invoke_handler(tauri::generate_handler![
+            create_project,
+            start_service,
+            stop_service,
+            detect_project
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
