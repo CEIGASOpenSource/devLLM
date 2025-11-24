@@ -236,33 +236,92 @@ ollama pull llama3.2
 
 ---
 
-## Development
+## Building from Source
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
-- [Rust](https://rustup.rs/)
-- [Tauri CLI](https://tauri.app/)
+You need the following installed on your system:
 
-### Setup
+#### 1. Node.js (v18+)
 
-```bash
-npm install
+**Option A: Download installer**
+- Download from https://nodejs.org/ (LTS version recommended)
+
+**Option B: Using winget (Windows)**
+```powershell
+winget install OpenJS.NodeJS.LTS
 ```
 
-### Run in development mode
+**Option C: Using package manager (macOS/Linux)**
+```bash
+# macOS
+brew install node
+
+# Ubuntu/Debian
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+#### 2. Rust
+
+**Option A: Download installer**
+- Download from https://rustup.rs/
+
+**Option B: Using winget (Windows)**
+```powershell
+winget install Rustlang.Rustup
+```
+
+**Option C: Using curl (macOS/Linux)**
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+#### 3. Restart your terminal
+
+After installing Node.js and Rust, **close and reopen your terminal** for PATH changes to take effect.
+
+#### 4. Verify installations
+
+```bash
+node --version   # Should show v18+
+npm --version    # Should show 9+
+rustc --version  # Should show 1.70+
+cargo --version  # Should show 1.70+
+```
+
+### Build Steps
+
+```bash
+# Clone the repository
+git clone https://github.com/CEIGASOpenSource/devLLM.git
+cd devLLM
+
+# Install dependencies
+npm install
+
+# Build for production
+npm run tauri:build
+```
+
+The built executable will be at `src-tauri/target/release/devllm.exe` (Windows) or `src-tauri/target/release/devllm` (macOS/Linux).
+
+### Development Mode
+
+To run in development mode with hot-reload:
 
 ```bash
 npm run tauri:dev
 ```
 
-### Build for production
+### Build Troubleshooting
 
-```bash
-npm run tauri:build
-```
-
-The built executable will be at `src-tauri/target/release/devllm.exe`
+| Issue | Solution |
+|-------|----------|
+| `npm` not recognized | Restart terminal after installing Node.js, or reinstall Node.js |
+| `cargo` not recognized | Restart terminal after installing Rust, or reinstall Rust |
+| Build fails on Windows | Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "Desktop development with C++" |
+| Build fails on Linux | Install build essentials: `sudo apt install build-essential libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev` |
 
 ## License
 
