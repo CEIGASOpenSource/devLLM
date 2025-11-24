@@ -752,6 +752,7 @@ backend/
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .manage(ProcessManager {
             processes: Mutex::new(HashMap::new()),
         })
