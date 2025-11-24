@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-shell';
 import type { ProjectConfig, ProjectStatus } from '../types/project';
 
 interface Props {
@@ -13,12 +12,9 @@ export default function ProjectCard({ project, status, onRemove }: Props) {
   const backendOk = status?.backend.healthy ?? false;
   const allHealthy = frontendOk && backendOk;
 
-  const openInBrowser = async () => {
-    try {
-      await open(`http://localhost:${project.frontend.port}`);
-    } catch (err) {
-      console.error('Failed to open URL:', err);
-    }
+  const openInBrowser = () => {
+    // Use window.open which works in Tauri WebView
+    window.open(`http://localhost:${project.frontend.port}`, '_blank');
   };
 
   const handleFrontendToggle = async () => {

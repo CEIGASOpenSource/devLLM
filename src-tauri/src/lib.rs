@@ -32,9 +32,13 @@ fn start_service(
     }
 
     let child = if cfg!(windows) {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NEW_CONSOLE: u32 = 0x00000010;
+
         Command::new("cmd")
-            .args(&["/c", &command])
+            .args(&["/k", &command])
             .current_dir(path)
+            .creation_flags(CREATE_NEW_CONSOLE)
             .spawn()
             .map_err(|e| format!("Failed to start {}: {}", service_type, e))?
     } else {
