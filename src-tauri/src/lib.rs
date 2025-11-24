@@ -15,6 +15,7 @@ fn start_service(
     service_type: String,
     project_path: String,
     command: String,
+    env_vars: Option<HashMap<String, String>>,
     state: State<ProcessManager>,
 ) -> Result<String, String> {
     let key = format!("{}:{}", project_path, service_type);
@@ -35,17 +36,33 @@ fn start_service(
         use std::os::windows::process::CommandExt;
         const CREATE_NEW_CONSOLE: u32 = 0x00000010;
 
-        Command::new("cmd")
-            .args(&["/k", &command])
+        let mut cmd = Command::new("cmd");
+        cmd.args(&["/k", &command])
             .current_dir(path)
-            .creation_flags(CREATE_NEW_CONSOLE)
-            .spawn()
+            .creation_flags(CREATE_NEW_CONSOLE);
+
+        // Apply environment variables
+        if let Some(vars) = &env_vars {
+            for (key, value) in vars {
+                cmd.env(key, value);
+            }
+        }
+
+        cmd.spawn()
             .map_err(|e| format!("Failed to start {}: {}", service_type, e))?
     } else {
-        Command::new("sh")
-            .args(&["-c", &command])
-            .current_dir(path)
-            .spawn()
+        let mut cmd = Command::new("sh");
+        cmd.args(&["-c", &command])
+            .current_dir(path);
+
+        // Apply environment variables
+        if let Some(vars) = &env_vars {
+            for (key, value) in vars {
+                cmd.env(key, value);
+            }
+        }
+
+        cmd.spawn()
             .map_err(|e| format!("Failed to start {}: {}", service_type, e))?
     };
 

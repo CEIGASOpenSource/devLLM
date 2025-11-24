@@ -7,12 +7,14 @@ export interface ProjectConfig {
     port: number;
     path: string;
     command: string;
+    env?: Record<string, string>;
   };
   backend: {
     port: number;
     path: string;
     command: string;
     healthEndpoint: string;
+    env?: Record<string, string>;
   };
 }
 

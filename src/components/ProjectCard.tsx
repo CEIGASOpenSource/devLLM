@@ -29,6 +29,7 @@ export default function ProjectCard({ project, status, onRemove }: Props) {
           serviceType: 'frontend',
           projectPath: project.frontend.path,
           command: project.frontend.command,
+          envVars: project.frontend.env || null,
         });
       }
     } catch (err) {
@@ -48,6 +49,7 @@ export default function ProjectCard({ project, status, onRemove }: Props) {
           serviceType: 'backend',
           projectPath: project.backend.path,
           command: project.backend.command,
+          envVars: project.backend.env || null,
         });
       }
     } catch (err) {

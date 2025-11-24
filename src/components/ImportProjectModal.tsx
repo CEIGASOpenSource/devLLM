@@ -16,6 +16,7 @@ export default function ImportProjectModal({ onClose, onImported }: Props) {
   const [backendPort, setBackendPort] = useState('');
   const [frontendCommand, setFrontendCommand] = useState('npm run dev');
   const [backendCommand, setBackendCommand] = useState('');
+  const [backendEnv, setBackendEnv] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleBrowseFrontend = async () => {
@@ -61,6 +62,19 @@ export default function ImportProjectModal({ onClose, onImported }: Props) {
     const fePort = parseInt(frontendPort) || ports.frontend;
     const bePort = parseInt(backendPort) || ports.backend;
 
+    // Parse environment variables from "KEY=value,KEY2=value2" format
+    const parseEnvVars = (envStr: string): Record<string, string> | undefined => {
+      if (!envStr.trim()) return undefined;
+      const env: Record<string, string> = {};
+      envStr.split(',').forEach(pair => {
+        const [key, ...valueParts] = pair.trim().split('=');
+        if (key && valueParts.length > 0) {
+          env[key.trim()] = valueParts.join('=').trim();
+        }
+      });
+      return Object.keys(env).length > 0 ? env : undefined;
+    };
+
     addProject({
       id: `imported-${Date.now()}`,
       name: name.trim(),
@@ -76,6 +90,7 @@ export default function ImportProjectModal({ onClose, onImported }: Props) {
         path: backendPath,
         command: backendCommand || `.venv/Scripts/uvicorn app:app --reload --port ${bePort}`,
         healthEndpoint: '/health',
+        env: parseEnvVars(backendEnv),
       },
     });
 
@@ -93,6 +108,7 @@ export default function ImportProjectModal({ onClose, onImported }: Props) {
     setBackendPort('');
     setFrontendCommand('npm run dev');
     setBackendCommand('');
+    setBackendEnv('');
     onClose();
   };
 
@@ -222,6 +238,18 @@ export default function ImportProjectModal({ onClose, onImported }: Props) {
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Environment Variables (optional)</label>
+                <input
+                  type="text"
+                  value={backendEnv}
+                  onChange={(e) => setBackendEnv(e.target.value)}
+                  placeholder="AXIOM_GOD_MODE=true,DEBUG=1"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm"
+                />
+                <div className="text-xs text-slate-600 mt-1">Comma-separated KEY=value pairs</div>
               </div>
             </div>
           </div>
